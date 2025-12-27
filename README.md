@@ -23,7 +23,7 @@ An intelligent Python agent that leverages Google's Gemini API to autonomously p
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/ShashankMk031/Ai_coding_agent
 cd AI_Agent
 ```
 
