@@ -25,7 +25,21 @@ def main():
     if args.verbose:
         print(f"User prompt: {args.user_prompt}\n")
 
-    generate_content(client, messages, args.verbose)
+    max_iterations = 8
+    try:
+        for iteration in range(max_iterations):
+            if args.verbose:
+                print(f"\n--- Iteration {iteration + 1} ---")
+            response = generate_content(client, messages, args.verbose)
+
+            # Check if model is finished: no function calls and has text response
+            if not response.function_calls and response.text:
+                print("Response:")
+                print(response.text)
+                break
+    except Exception as e:
+        print(f"Error: {e}")
+        raise
 
 
 def generate_content(client, messages, verbose):
@@ -43,11 +57,14 @@ def generate_content(client, messages, verbose):
         print("Prompt tokens:", response.usage_metadata.prompt_token_count)
         print("Response tokens:", response.usage_metadata.candidates_token_count)
 
-    if not response.function_calls:
-        print("Response:")
-        print(response.text)
-        return
+    # Add the model's response to messages
+    for candidate in response.candidates:
+        messages.append(candidate.content)
 
+    if not response.function_calls:
+        return response
+
+    # Call functions and collect responses
     function_responses = []
     for function_call in response.function_calls:
         result = call_function(function_call, verbose)
@@ -60,6 +77,15 @@ def generate_content(client, messages, verbose):
         if verbose:
             print(f"-> {result.parts[0].function_response.response}")
         function_responses.append(result.parts[0])
+
+    # Convert function responses to a user message and add to messages
+    function_response_content = types.Content(
+        role="user",
+        parts=function_responses,
+    )
+    messages.append(function_response_content)
+
+    return response
 
 
 if __name__ == "__main__":
